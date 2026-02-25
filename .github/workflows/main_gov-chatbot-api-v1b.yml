@@ -1,0 +1,34 @@
+name: Build and deploy Python project to Azure Function App - gov-chatbot-api-v1b
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'gov-chatbot-api-v1b'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # 별도의 zip/unzip 단계 없이 배포 액션에서 원격 빌드 수행
+      - name: 'Deploy to Azure Functions'
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          # VPN 이슈 우회를 위해 게시 프로필 사용
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }} 
+          # Azure 서버에서 requirements.txt 기반 빌드 강제
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
