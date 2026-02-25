@@ -3,6 +3,6 @@
 # Manually managing azure-functions-worker may cause unexpected issues
 
 azure-functions
-azure-search-documents>=11.4.0
-azure-core
-openai>=1.0.0
+# azure-search-documents>=11.4.0
+# azure-core
+# openai>=1.0.0
