@@ -166,10 +166,10 @@
     </div>
 
     <script>
-      const API_URL = "https://gov-chatbot-api-v1b.azurewebsites.net/api/chatv1";
+      const API_URL = "/api/chatv1";
 
       const test="test";
-      
+
       // 질의 샘플 맵핑
       const sampleQueries = {
         "행정업무 효율 운영 의의":
@@ -216,7 +216,7 @@
         try {
           // URL 파라미터로 code(Function Key)와 query를 함께 전달함
           const response = await fetch(
-            `${API_URL}?ßquery=${encodeURIComponent(userText)}`,
+            `${API_URL}?query=${encodeURIComponent(userText)}`,
             {
               method: "GET",
             },
