@@ -64,3 +64,24 @@ def chatv1(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Error: {str(e)}")
         return func.HttpResponse(f"Internal Error: {str(e)}", status_code=500)
+   
+# chat html을 반환하는 함수.    
+@app.route(route="chat", auth_level=func.AuthLevel.ANONYMOUS)
+def chat_page(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Serving Chat UI page.')
+    
+    # 프로젝트 루트에 있는 gov-chat.html 파일을 읽어서 반환함
+    try:
+        # 파일 경로 설정 (Azure Functions 환경 대응)
+        html_path = os.path.join(os.path.dirname(__file__), 'gov-chat.html')
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+            
+        return func.HttpResponse(
+            html_content,
+            mimetype="text/html",
+            status_code=200
+        )
+    except Exception as e:
+        return func.HttpResponse(f"Error loading HTML: {str(e)}", status_code=500)
+    
