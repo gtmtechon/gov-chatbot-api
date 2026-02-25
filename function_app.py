@@ -6,7 +6,10 @@ from azure.search.documents.models import VectorizedQuery
 from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
 
-app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
+#app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+
 
 @app.route(route="chatv1")
 def chatv1(req: func.HttpRequest) -> func.HttpResponse:
