@@ -77,6 +77,31 @@ az storage container create `
     --connection-string $STORAGE_CONNECTION_STRING
 
 
+# 1. 변수 설정
+$githubRawUrl = "https://raw.githubusercontent.com/유저명/저장소명/브랜치명/경로/파일.pdf"
+$blobName = "upload_file.pdf" # 저장될 이름
+$localTempPath = "$env:TEMP\temp_github_file.pdf"
+
+# 2. GitHub에서 파일 다운로드
+Invoke-WebRequest -Uri $githubRawUrl -OutFile $localTempPath
+
+# 3. Storage Account Context 가져오기 (이미 로그인된 경우)
+$storageAccount = Get-AzStorageAccount -ResourceGroupName "$RESOURCE_GROUP" -Name $STORAGE_NAME
+$ctx = $storageAccount.Context
+
+# 4. Blob Storage로 업로드
+Set-AzStorageBlobContent -File $localTempPath `
+                         -Container $CONTAINER_NAME `
+                         -Blob $blobName `
+                         -Context $ctx `
+                         -Force
+
+# 5. 로컬 임시 파일 정리
+Remove-Item $localTempPath
+
+Write-Host "업로드 완료: $blobName" -ForegroundColor Green
+
+
 # -----------------------------------------------------------------------------------
 # Step 3: Azure OpenAI 리소스 생성 및 모델 배포 (Create AOAI & Deploy Models)
 # -----------------------------------------------------------------------------------
