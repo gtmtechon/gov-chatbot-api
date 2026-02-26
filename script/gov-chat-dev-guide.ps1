@@ -24,12 +24,12 @@
 # -----------------------------------------------------------------------------------
 Write-Host "Step 0: Configuring script variables..." -ForegroundColor Green
 
-$VERSION = "v1b"
+$VERSION = "v1a"
 $LOCATION = "koreacentral"
 $API_VERSION = "2024-07-01" # 안정적인 AI Search API 버전
 
 # 리소스 이름 (Resource Names)
-$RESOURCE_GROUP = "rg-gov-chatbot"
+$RESOURCE_GROUP = "rg-gov-chatbot-$VERSION"
 $STORAGE_NAME = "stgovhandbook$VERSION"
 $CONTAINER_NAME = "handbook-data"
 $AOAI_NAME = "aoai-gov-expert-$VERSION"
