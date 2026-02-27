@@ -24,7 +24,7 @@
 # -----------------------------------------------------------------------------------
 Write-Host "Step 0: Configuring script variables..." -ForegroundColor Green
 
-$VERSION = "v1a"
+$VERSION = "v1d"
 $LOCATION = "koreacentral"
 $API_VERSION = "2024-07-01" # 안정적인 AI Search API 버전
 
@@ -78,9 +78,10 @@ az storage container create `
 
 
 # 1. 변수 설정
-$githubRawUrl = "https://raw.githubusercontent.com/유저명/저장소명/브랜치명/경로/파일.pdf"
-$blobName = "upload_file.pdf" # 저장될 이름
-$localTempPath = "$env:TEMP\temp_github_file.pdf"
+$githubRawUrl = "https://raw.githubusercontent.com/gtmtechon/gov-chatbot-api/HEAD/data/administrative-work-op-manual.pdf"
+
+$blobName = "administrative-work-op-manual.pdf" # 저장될 이름
+$localTempPath = ".\tmp_administrative-work-op-manual.pdf"
 
 # 2. GitHub에서 파일 다운로드
 Invoke-WebRequest -Uri $githubRawUrl -OutFile $localTempPath
@@ -97,7 +98,7 @@ Set-AzStorageBlobContent -File $localTempPath `
                          -Force
 
 # 5. 로컬 임시 파일 정리
-Remove-Item $localTempPath
+#Remove-Item $localTempPath
 
 Write-Host "업로드 완료: $blobName" -ForegroundColor Green
 
@@ -163,6 +164,12 @@ Write-Host "Step 5: Configuring the AI Search pipeline (DataSource, Index, Skill
 
 # 5.1. 데이터 소스 (Data Source) 생성
 Write-Host "  5.1. Creating DataSource '$DATASOURCE_NAME'..." -ForegroundColor Cyan
+$headers = @(
+    "Content-Type=application/json",
+    "api-key=$SEARCH_KEY"
+)
+
+
 $datasourceBody = @"
 {
     "name": "$DATASOURCE_NAME",
@@ -172,10 +179,11 @@ $datasourceBody = @"
     "container": { "name": "$CONTAINER_NAME" }
 }
 "@
+
 az rest --method put `
     --uri "$SEARCH_ENDPOINT/datasources/$DATASOURCE_NAME`?api-version=$API_VERSION" `
     --body $datasourceBody `
-    --headers "Content-Type=application/json", "api-key=$SEARCH_KEY"
+    --headers $headers
 
 # 5.2. 인덱스 (Index) 생성
 Write-Host "  5.2. Creating Index '$INDEX_NAME'..." -ForegroundColor Cyan
@@ -198,10 +206,12 @@ $indexBody = @"
 az rest --method put `
     --uri "$SEARCH_ENDPOINT/indexes/$INDEX_NAME`?api-version=$API_VERSION" `
     --body $indexBody `
-    --headers "Content-Type=application/json", "api-key=$SEARCH_KEY"
+    --headers $headers
 
 # 5.3. 기술 세트 (Skillset) 생성
 Write-Host "  5.3. Creating Skillset '$SKILLSET_NAME'..." -ForegroundColor Cyan
+
+
 $skillsetBody = @"
 {
     "name": "$SKILLSET_NAME",
@@ -215,6 +225,7 @@ $skillsetBody = @"
             "textSplitMode": "pages",
             "maximumPageLength": 1000,
             "pageOverlapLength": 100,
+            "inputs": [ { "name": "text", "source": "/document/content" } ],
             "outputs": [ { "name": "textItems", "targetName": "chunks" } ]
         },
         {
@@ -224,6 +235,7 @@ $skillsetBody = @"
             "resourceUri": "$AOAI_ENDPOINT",
             "apiKey": "$AOAI_KEY",
             "deploymentId": "$EMBEDDING_MODEL_ID",
+            "modelName": "text-embedding-3-small",
             "inputs": [ { "name": "text", "source": "/document/content/chunks/*" } ],
             "outputs": [ { "name": "embedding", "targetName": "vector" } ]
         }
@@ -235,7 +247,6 @@ $skillsetBody = @"
                 "parentKeyFieldName": "parent_id",
                 "sourceContext": "/document/content/chunks/*",
                 "mappings": [
-                    { "name": "chunk_id", "source": "/document/content/chunks/*" },
                     { "name": "content", "source": "/document/content/chunks/*" },
                     { "name": "content_vector", "source": "/document/content/chunks/*/vector" },
                     { "name": "title", "source": "/document/metadata_storage_name" }
@@ -246,10 +257,12 @@ $skillsetBody = @"
     }
 }
 "@
+
 az rest --method put `
     --uri "$SEARCH_ENDPOINT/skillsets/$SKILLSET_NAME`?api-version=$API_VERSION" `
     --body $skillsetBody `
-    --headers "Content-Type=application/json", "api-key=$SEARCH_KEY"
+    --headers $headers
+
 
 # 5.4. 인덱서 (Indexer) 생성
 Write-Host "  5.4. Creating Indexer '$INDEXER_NAME'..." -ForegroundColor Cyan
@@ -268,27 +281,21 @@ $indexerBody = @"
 az rest --method put `
     --uri "$SEARCH_ENDPOINT/indexers/$INDEXER_NAME`?api-version=$API_VERSION" `
     --body $indexerBody `
-    --headers "Content-Type=application/json", "api-key=$SEARCH_KEY"
+    --headers $headers
 
 
 # -----------------------------------------------------------------------------------
 # Step 6: 문서 업로드 및 인덱싱 실행 (Upload Document & Run Indexing)
 # -----------------------------------------------------------------------------------
-Write-Host "Step 6: Uploading PDF document and running the indexer..." -ForegroundColor Green
 
-# PDF 파일을 Blob Storage에 업로드 (업로드 시 인덱서가 자동으로 감지하여 처리 시작 가능)
-az storage blob upload `
-    --account-name $STORAGE_NAME `
-    --container-name $CONTAINER_NAME `
-    --file "../data/gov-doc.pdf" `
-    --name "2025_handbook.pdf" `
-    --connection-string $STORAGE_CONNECTION_STRING `
-    --overwrite
+
+# Write-Host "Step 6: Uploading PDF document and running the indexer..." -ForegroundColor Green
+
 
 # 인덱서를 수동으로 즉시 실행
-Write-Host "Running the indexer '$INDEXER_NAME' now..." -ForegroundColor Cyan
-az rest --method post --uri "$SEARCH_ENDPOINT/indexers/$INDEXER_NAME/run`?api-version=$API_VERSION" --headers "api-key=$SEARCH_KEY"
-Write-Host "Indexer run command issued. Check the Azure Portal for progress."
+#Write-Host "Running the indexer '$INDEXER_NAME' now..." -ForegroundColor Cyan
+#az rest --method post --uri "$SEARCH_ENDPOINT/indexers/$INDEXER_NAME/run`?api-version=$API_VERSION" --headers "api-key=$SEARCH_KEY"
+#Write-Host "Indexer run command issued. Check the Azure Portal for progress."
 
 
 # -----------------------------------------------------------------------------------
@@ -315,6 +322,8 @@ az functionapp create `
     --functions-version 4 `
     --os-type Linux
 
+    
+
 # 잠시 대기 후 환경 변수 설정
 Start-Sleep -Seconds 15
 Write-Host "Injecting environment variables into '$FUNCTION_APP_NAME'..." -ForegroundColor Cyan
@@ -327,7 +336,9 @@ az functionapp config appsettings set --name $FUNCTION_APP_NAME `
     "AOAI_ENDPOINT=$AOAI_ENDPOINT" `
     "AOAI_KEY=$AOAI_KEY" `
     "AOAI_MODEL_ID=$AOAI_MODEL_ID" `
-    "EMBEDDING_MODEL_ID=$EMBEDDING_MODEL_ID"
+    "EMBEDDING_MODEL_ID=$EMBEDDING_MODEL_ID" `
+    "SCM_DO_BUILD_DURING_DEPLOYMENT=true" 
+
 
 Write-Host "Function App created. Now, deploy your Python code from '../gov-chatbot-api/' folder." -ForegroundColor Yellow
 
